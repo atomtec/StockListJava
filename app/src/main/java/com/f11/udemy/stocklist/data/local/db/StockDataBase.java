@@ -1,4 +1,4 @@
-package com.f11.udemy.stocklist.data.db;
+package com.f11.udemy.stocklist.data.local.db;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -6,12 +6,13 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import com.f11.udemy.stocklist.data.local.LocalDataSource;
 import com.f11.udemy.stocklist.data.model.AppStock;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class StockDataBase extends SQLiteOpenHelper {
+public class StockDataBase extends SQLiteOpenHelper implements LocalDataSource {
 
     private static final String COLUMN_ID = "symbol";
     private static final String COLUMN_PRICE = "price";

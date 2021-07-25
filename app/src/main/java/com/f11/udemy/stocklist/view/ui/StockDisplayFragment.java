@@ -18,7 +18,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.f11.udemy.stocklist.R;
-import com.f11.udemy.stocklist.data.db.StockDataBase;
+import com.f11.udemy.stocklist.data.local.LocalDataSource;
+import com.f11.udemy.stocklist.data.local.db.StockDataBase;
 import com.f11.udemy.stocklist.data.model.AppStock;
 import com.f11.udemy.stocklist.data.remote.RemoteStockProviderSDK;
 import com.f11.udemy.stocklist.view.adapter.StockListAdapter;
@@ -36,7 +37,7 @@ public class StockDisplayFragment extends Fragment {
     View mProgressBar ;
     private String mSymbol;
     private Handler mHandler = new Handler(Looper.getMainLooper());
-    private StockDataBase mStockDBInstace = null;
+    private LocalDataSource mLocalDB = null;
     ExecutorService mExecutor = Executors.newSingleThreadExecutor();
 
     Runnable mStockUpdateRunnable = new Runnable() {
@@ -44,9 +45,9 @@ public class StockDisplayFragment extends Fragment {
         public void run() {
             try {
                 List<AppStock> remoteStocks = RemoteStockProviderSDK.getRemoteStocks
-                        (mStockDBInstace.getAllStocks());
+                        (mLocalDB.getAllStocks());
                 for(AppStock stock: remoteStocks) {
-                    mStockDBInstace.insertorUpdate(stock);
+                    mLocalDB.insertorUpdate(stock);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -54,7 +55,7 @@ public class StockDisplayFragment extends Fragment {
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    mAdapter.setStocks(mStockDBInstace.getAllStocks());
+                    mAdapter.setStocks(mLocalDB.getAllStocks());
                 }
             });
         }
@@ -68,7 +69,7 @@ public class StockDisplayFragment extends Fragment {
             try {
                 stock = RemoteStockProviderSDK.getStockBySymbol(mSymbol);
                 if(stock != null)
-                    mStockDBInstace.insertorUpdate(stock);
+                    mLocalDB.insertorUpdate(stock);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -76,7 +77,7 @@ public class StockDisplayFragment extends Fragment {
                 @Override
                 public void run() {
                     if(stock != null) {
-                        mAdapter.setStocks(mStockDBInstace.getAllStocks());
+                        mAdapter.setStocks(mLocalDB.getAllStocks());
                         Toast.makeText(getContext(),"Stock Added",Toast.LENGTH_LONG).show();
                     }
                     else{
@@ -98,7 +99,7 @@ public class StockDisplayFragment extends Fragment {
             Bundle savedInstanceState
     ) {
         // Inflate the layout for this fragment
-        mStockDBInstace = StockDataBase.getInstance(getActivity().getApplicationContext());
+        mLocalDB = StockDataBase.getInstance(getActivity().getApplicationContext());
 
         return inflater.inflate(R.layout.fragment_first, container, false);
     }
