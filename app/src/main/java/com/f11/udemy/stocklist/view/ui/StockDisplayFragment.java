@@ -19,7 +19,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.f11.udemy.stocklist.R;
 import com.f11.udemy.stocklist.data.local.LocalDataSource;
-import com.f11.udemy.stocklist.data.local.db.StockDataBase;
+import com.f11.udemy.stocklist.data.local.db.room.LocalDataSourceImpl;
+import com.f11.udemy.stocklist.data.local.db.sql.StockDataBase;
 import com.f11.udemy.stocklist.data.model.AppStock;
 import com.f11.udemy.stocklist.data.remote.RemoteStockProviderSDK;
 import com.f11.udemy.stocklist.view.adapter.StockListAdapter;
@@ -99,7 +100,8 @@ public class StockDisplayFragment extends Fragment {
             Bundle savedInstanceState
     ) {
         // Inflate the layout for this fragment
-        mLocalDB = StockDataBase.getInstance(getActivity().getApplicationContext());
+        mLocalDB = LocalDataSourceImpl.getInstance(requireActivity().getApplication());
+                //StockDataBase.getInstance(getActivity().getApplicationContext());
 
         return inflater.inflate(R.layout.fragment_first, container, false);
     }

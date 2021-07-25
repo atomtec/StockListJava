@@ -2,16 +2,25 @@ package com.f11.udemy.stocklist.data.model;
 
 
 import androidx.annotation.NonNull;
+import androidx.room.ColumnInfo;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
 
 
-
+@Entity(tableName = "stock_table")
 public class AppStock {
 
+    @PrimaryKey
     @NonNull
+    @ColumnInfo(name = "symbol")
     private String mSymbol;
+    @ColumnInfo(name = "price")
     private float mPrice;
+    @ColumnInfo(name = "change")
     private float mChange;
+    @ColumnInfo(name = "absolutechange")
     private float mAbsolutechange;
+    @ColumnInfo(name = "stockname")
     private String mStockname;
 
 

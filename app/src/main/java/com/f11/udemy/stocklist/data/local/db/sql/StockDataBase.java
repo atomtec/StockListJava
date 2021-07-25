@@ -1,4 +1,4 @@
-package com.f11.udemy.stocklist.data.local.db;
+package com.f11.udemy.stocklist.data.local.db.sql;
 
 import android.content.ContentValues;
 import android.content.Context;
