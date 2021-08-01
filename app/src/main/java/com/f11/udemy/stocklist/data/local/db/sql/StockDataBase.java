@@ -12,6 +12,8 @@ import com.f11.udemy.stocklist.data.model.AppStock;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.lifecycle.LiveData;
+
 public class StockDataBase extends SQLiteOpenHelper implements LocalDataSource {
 
     private static final String COLUMN_ID = "symbol";
@@ -122,5 +124,11 @@ public class StockDataBase extends SQLiteOpenHelper implements LocalDataSource {
         db.delete(TABLE_NAME, COLUMN_ID + " = ?",
                 new String[]{symbol});
 
+    }
+
+    //We will use room for this
+    @Override
+    public LiveData<List<AppStock>> observeStocks() {
+        throw new UnsupportedOperationException("Live Data Not Supported");
     }
 }

@@ -1,5 +1,6 @@
 package com.f11.udemy.stocklist.data.local.db.room;
 
+import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
@@ -14,6 +15,9 @@ import java.util.List;
 public interface StockDao {
     @Query("SELECT * from stock_table ORDER BY symbol ASC")
     List<AppStock> getAllStocks();
+
+    @Query("SELECT * from stock_table ORDER BY symbol ASC")
+    LiveData<List<AppStock>> observeStocks();
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(AppStock stock);

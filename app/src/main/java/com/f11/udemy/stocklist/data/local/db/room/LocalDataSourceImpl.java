@@ -1,12 +1,13 @@
 package com.f11.udemy.stocklist.data.local.db.room;
 
 import android.app.Application;
-import android.content.Context;
 
 import com.f11.udemy.stocklist.data.local.LocalDataSource;
 import com.f11.udemy.stocklist.data.model.AppStock;
 
 import java.util.List;
+
+import androidx.lifecycle.LiveData;
 
 
 public class LocalDataSourceImpl implements LocalDataSource {
@@ -15,8 +16,11 @@ public class LocalDataSourceImpl implements LocalDataSource {
 
     private StockDao mStockDao;
 
+    private LiveData<List<AppStock>> mStockObservable;
+
     private LocalDataSourceImpl(Application context) {
         mStockDao = StockRoomDB.getDatabase(context.getApplicationContext()).mStockDao();
+        mStockObservable = mStockDao.observeStocks();
     }
 
 
@@ -40,5 +44,10 @@ public class LocalDataSourceImpl implements LocalDataSource {
     @Override
     public void deleteBySymbol(String symbol) {
         mStockDao.delete(symbol);
+    }
+
+    @Override
+    public LiveData<List<AppStock>> observeStocks() {
+        return mStockObservable;
     }
 }

@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatToggleButton;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -53,12 +54,12 @@ public class StockDisplayFragment extends Fragment {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            getActivity().runOnUiThread(new Runnable() {
+           /* getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     mAdapter.setStocks(mLocalDB.getAllStocks());
                 }
-            });
+            });*/
         }
 
     };
@@ -78,7 +79,7 @@ public class StockDisplayFragment extends Fragment {
                 @Override
                 public void run() {
                     if(stock != null) {
-                        mAdapter.setStocks(mLocalDB.getAllStocks());
+                        //mAdapter.setStocks(mLocalDB.getAllStocks());
                         Toast.makeText(getContext(),"Stock Added",Toast.LENGTH_LONG).show();
                     }
                     else{
@@ -113,6 +114,12 @@ public class StockDisplayFragment extends Fragment {
         mAdapter = new StockListAdapter(getContext());
         mStockRecyclerView.setAdapter(mAdapter);
         mStockRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        mLocalDB.observeStocks().observe(getViewLifecycleOwner(), new Observer<List<AppStock>>() {
+            @Override
+            public void onChanged(List<AppStock> appStocks) {
+                mAdapter.setStocks(appStocks);
+            }
+        });
         setHasOptionsMenu(true);
     }
 
