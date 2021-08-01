@@ -2,7 +2,10 @@ package com.f11.udemy.stocklist.data.remote;
 
 
 
+import com.f11.udemy.stocklist.data.local.LocalDataSource;
 import com.f11.udemy.stocklist.data.model.AppStock;
+import com.f11.udemy.stocklist.data.repo.DataRepository;
+import com.f11.udemy.stocklist.data.repo.StockRepository;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -17,10 +20,24 @@ import yahoofinance.quotes.stock.StockQuote;
  * This provider is backed by SDK , we can have many other
  * providers backed by direct API for example
  */
-public class RemoteStockProviderSDK  {
+public class RemoteStockProviderSDK implements RemoteDataSource {
+
+    private static RemoteDataSource INSTANCE = null;
 
 
-    public static List<AppStock> getRemoteStocks(List<AppStock> stocks) throws IOException {
+    public static RemoteDataSource getInstance() {
+        if (INSTANCE == null) {
+            synchronized (StockRepository.class) {
+                if (INSTANCE == null) {
+                    INSTANCE =new RemoteStockProviderSDK();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+
+
+    public List<AppStock> getRemoteStocks(List<AppStock> stocks) throws IOException {
 
         String[] symbolArray = new String[stocks.size()];
         Map<String, AppStock> appStockMap = new HashMap<>();
@@ -57,7 +74,7 @@ public class RemoteStockProviderSDK  {
     }
 
 
-    public static AppStock getStockBySymbol(String symbol) throws IOException {
+    public AppStock getStockBySymbol(String symbol) throws IOException {
        Stock stock = YahooFinance.get(symbol);
        AppStock appStock = null;
        if(stock != null){

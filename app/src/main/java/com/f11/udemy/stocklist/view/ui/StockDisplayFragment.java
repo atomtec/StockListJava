@@ -11,6 +11,19 @@ import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.Toast;
 
+import com.f11.udemy.stocklist.R;
+import com.f11.udemy.stocklist.data.local.db.room.LocalDataSourceImpl;
+import com.f11.udemy.stocklist.data.model.AppStock;
+import com.f11.udemy.stocklist.data.model.FetchStatus;
+import com.f11.udemy.stocklist.data.remote.RemoteStockProviderSDK;
+import com.f11.udemy.stocklist.data.repo.DataRepository;
+import com.f11.udemy.stocklist.data.repo.StockRepository;
+import com.f11.udemy.stocklist.view.adapter.StockListAdapter;
+
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatToggleButton;
 import androidx.fragment.app.Fragment;
@@ -18,79 +31,23 @@ import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.f11.udemy.stocklist.R;
-import com.f11.udemy.stocklist.data.local.LocalDataSource;
-import com.f11.udemy.stocklist.data.local.db.room.LocalDataSourceImpl;
-import com.f11.udemy.stocklist.data.local.db.sql.StockDataBase;
-import com.f11.udemy.stocklist.data.model.AppStock;
-import com.f11.udemy.stocklist.data.remote.RemoteStockProviderSDK;
-import com.f11.udemy.stocklist.view.adapter.StockListAdapter;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 
 public class StockDisplayFragment extends Fragment {
 
     RecyclerView mStockRecyclerView;
     StockListAdapter mAdapter;
     View mProgressBar ;
-    private String mSymbol;
+
     private Handler mHandler = new Handler(Looper.getMainLooper());
-    private LocalDataSource mLocalDB = null;
+    private DataRepository mRepo = null;
     ExecutorService mExecutor = Executors.newSingleThreadExecutor();
 
     Runnable mStockUpdateRunnable = new Runnable() {
         @Override
         public void run() {
-            try {
-                List<AppStock> remoteStocks = RemoteStockProviderSDK.getRemoteStocks
-                        (mLocalDB.getAllStocks());
-                for(AppStock stock: remoteStocks) {
-                    mLocalDB.insertorUpdate(stock);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-           /* getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mAdapter.setStocks(mLocalDB.getAllStocks());
-                }
-            });*/
-        }
-
-    };
-
-    Runnable mSearchStockRunnable = new Runnable() {
-        AppStock stock = null;
-        @Override
-        public void run() {
-            try {
-                stock = RemoteStockProviderSDK.getStockBySymbol(mSymbol);
-                if(stock != null)
-                    mLocalDB.insertorUpdate(stock);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if(stock != null) {
-                        //mAdapter.setStocks(mLocalDB.getAllStocks());
-                        Toast.makeText(getContext(),"Stock Added",Toast.LENGTH_LONG).show();
-                    }
-                    else{
-                        Toast.makeText(getContext(),"Stock CouldNot be Found",Toast.LENGTH_LONG).show();
-                    }
-                    mProgressBar.setVisibility(View.GONE);
-                }
-            });
+            mRepo.refreshStocks();
         }
     };
-
 
     private static final String TAG = StockDisplayFragment.class.getSimpleName();
 
@@ -101,8 +58,9 @@ public class StockDisplayFragment extends Fragment {
             Bundle savedInstanceState
     ) {
         // Inflate the layout for this fragment
-        mLocalDB = LocalDataSourceImpl.getInstance(requireActivity().getApplication());
-                //StockDataBase.getInstance(getActivity().getApplicationContext());
+        mRepo = StockRepository.getInstance(LocalDataSourceImpl.getInstance(getActivity().getApplication()),
+                RemoteStockProviderSDK.getInstance());
+
 
         return inflater.inflate(R.layout.fragment_first, container, false);
     }
@@ -114,10 +72,37 @@ public class StockDisplayFragment extends Fragment {
         mAdapter = new StockListAdapter(getContext());
         mStockRecyclerView.setAdapter(mAdapter);
         mStockRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        mLocalDB.observeStocks().observe(getViewLifecycleOwner(), new Observer<List<AppStock>>() {
+        mRepo.observeStocks().observe(getViewLifecycleOwner(), new Observer<List<AppStock>>() {
             @Override
             public void onChanged(List<AppStock> appStocks) {
                 mAdapter.setStocks(appStocks);
+            }
+        });
+        mRepo.observeFetchStatus().observe(getViewLifecycleOwner(), new Observer<FetchStatus>() {
+            @Override
+            public void onChanged(FetchStatus fetchStatus) {
+                switch (fetchStatus){
+                    case FETCHING:
+                        mProgressBar.setVisibility(View.VISIBLE);
+                        Toast.makeText(requireContext(),"Fetching Stocks",Toast.LENGTH_LONG).show();
+                        break;
+                    case FETCH_ERROR:
+                        mProgressBar.setVisibility(View.GONE);
+                        Toast.makeText(requireContext(),"Error Fetching Stocks",Toast.LENGTH_LONG).show();
+                        break;
+                    case STOCK_FOUND:
+                        mProgressBar.setVisibility(View.GONE);
+                        Toast.makeText(requireContext(),"StockFound",Toast.LENGTH_LONG).show();
+                        break;
+                    case STOCK_NOT_FOUND:
+                        mProgressBar.setVisibility(View.GONE);
+                        Toast.makeText(requireContext(),"Stock Not Found",Toast.LENGTH_LONG).show();
+                        break;
+                    default:
+                        mProgressBar.setVisibility(View.GONE);
+                        break;
+
+                }
             }
         });
         setHasOptionsMenu(true);
@@ -156,10 +141,15 @@ public class StockDisplayFragment extends Fragment {
 
 
 
-    public void addStock(String symbol){
-        mSymbol = symbol;
+    public void addStock(final String symbol){
+
         mProgressBar.setVisibility(View.VISIBLE);
-        mExecutor.submit(mSearchStockRunnable);
+        mExecutor.submit(new Runnable() {
+            @Override
+            public void run() {
+                mRepo.searchAndAddStock(symbol);
+            }
+        });
     }
 
 }
