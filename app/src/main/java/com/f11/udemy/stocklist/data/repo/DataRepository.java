@@ -14,4 +14,6 @@ public interface DataRepository {
     public void refreshStocks();
     public LiveData<List<AppStock>> observeStocks();
     public LiveData<FetchStatus> observeFetchStatus();
+    public void startSync();
+    public void stopSync();
 }

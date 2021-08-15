@@ -18,6 +18,7 @@ import com.f11.udemy.stocklist.data.model.FetchStatus;
 import com.f11.udemy.stocklist.data.remote.RemoteStockProviderSDK;
 import com.f11.udemy.stocklist.data.repo.DataRepository;
 import com.f11.udemy.stocklist.data.repo.StockRepository;
+import com.f11.udemy.stocklist.data.sync.SyncThread;
 import com.f11.udemy.stocklist.view.adapter.StockListAdapter;
 
 import java.util.List;
@@ -37,17 +38,11 @@ public class StockDisplayFragment extends Fragment {
     RecyclerView mStockRecyclerView;
     StockListAdapter mAdapter;
     View mProgressBar ;
+    private SyncThread syncThread = new SyncThread("BackgroundRefreshThread");
 
-    private Handler mHandler = new Handler(Looper.getMainLooper());
+
     private DataRepository mRepo = null;
-    ExecutorService mExecutor = Executors.newSingleThreadExecutor();
 
-    Runnable mStockUpdateRunnable = new Runnable() {
-        @Override
-        public void run() {
-            mRepo.refreshStocks();
-        }
-    };
 
     private static final String TAG = StockDisplayFragment.class.getSimpleName();
 
@@ -58,8 +53,10 @@ public class StockDisplayFragment extends Fragment {
             Bundle savedInstanceState
     ) {
         // Inflate the layout for this fragment
+
+        syncThread.start();
         mRepo = StockRepository.getInstance(LocalDataSourceImpl.getInstance(getActivity().getApplication()),
-                RemoteStockProviderSDK.getInstance());
+                RemoteStockProviderSDK.getInstance(),syncThread.getHandler());
 
 
         return inflater.inflate(R.layout.fragment_first, container, false);
@@ -111,18 +108,15 @@ public class StockDisplayFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        mHandler.post( new Runnable() {
-            public void run() {
-                mExecutor.submit(mStockUpdateRunnable);
-                mHandler.postDelayed(this, 5000);//run after every 5 seconds
-            }
-        });
+        mRepo.startSync();
+
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        mHandler.removeCallbacksAndMessages(null);
+        mRepo.stopSync();
+
     }
 
     @Override
@@ -142,14 +136,12 @@ public class StockDisplayFragment extends Fragment {
 
 
     public void addStock(final String symbol){
-
-        mProgressBar.setVisibility(View.VISIBLE);
-        mExecutor.submit(new Runnable() {
-            @Override
-            public void run() {
-                mRepo.searchAndAddStock(symbol);
-            }
-        });
+        mRepo.searchAndAddStock(symbol);
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        syncThread.quitSafely();
+    }
 }
