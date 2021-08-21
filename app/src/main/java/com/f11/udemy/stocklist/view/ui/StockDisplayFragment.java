@@ -1,8 +1,6 @@
 package com.f11.udemy.stocklist.view.ui;
 
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -12,23 +10,21 @@ import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import com.f11.udemy.stocklist.R;
-import com.f11.udemy.stocklist.data.local.db.room.LocalDataSourceImpl;
+import com.f11.udemy.stocklist.StockListAppLication;
 import com.f11.udemy.stocklist.data.model.AppStock;
 import com.f11.udemy.stocklist.data.model.FetchStatus;
-import com.f11.udemy.stocklist.data.remote.RemoteStockProviderSDK;
 import com.f11.udemy.stocklist.data.repo.DataRepository;
-import com.f11.udemy.stocklist.data.repo.StockRepository;
-import com.f11.udemy.stocklist.data.sync.SyncThread;
 import com.f11.udemy.stocklist.view.adapter.StockListAdapter;
+import com.f11.udemy.stocklist.view.viewmodel.StockViewModel;
+import com.f11.udemy.stocklist.view.viewmodel.StockViewModelFactory;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatToggleButton;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -38,10 +34,8 @@ public class StockDisplayFragment extends Fragment {
     RecyclerView mStockRecyclerView;
     StockListAdapter mAdapter;
     View mProgressBar ;
-    private SyncThread syncThread = new SyncThread("BackgroundRefreshThread");
 
-
-    private DataRepository mRepo = null;
+    private StockViewModel mStockViewModel = null;
 
 
     private static final String TAG = StockDisplayFragment.class.getSimpleName();
@@ -53,12 +47,6 @@ public class StockDisplayFragment extends Fragment {
             Bundle savedInstanceState
     ) {
         // Inflate the layout for this fragment
-
-        syncThread.start();
-        mRepo = StockRepository.getInstance(LocalDataSourceImpl.getInstance(getActivity().getApplication()),
-                RemoteStockProviderSDK.getInstance(),syncThread.getHandler());
-
-
         return inflater.inflate(R.layout.fragment_first, container, false);
     }
 
@@ -67,15 +55,18 @@ public class StockDisplayFragment extends Fragment {
         mStockRecyclerView = view.findViewById(R.id.recycler_view);
         mProgressBar = view.findViewById(R.id.llProgressBar);
         mAdapter = new StockListAdapter(getContext());
+        DataRepository repo = StockListAppLication.class.cast(getActivity().getApplication()).repository;
+        mStockViewModel = new ViewModelProvider(getActivity(), new StockViewModelFactory(repo))
+                .get(StockViewModel.class);
         mStockRecyclerView.setAdapter(mAdapter);
         mStockRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        mRepo.observeStocks().observe(getViewLifecycleOwner(), new Observer<List<AppStock>>() {
+        mStockViewModel.getAllStocks().observe(getViewLifecycleOwner(), new Observer<List<AppStock>>() {
             @Override
             public void onChanged(List<AppStock> appStocks) {
                 mAdapter.setStocks(appStocks);
             }
         });
-        mRepo.observeFetchStatus().observe(getViewLifecycleOwner(), new Observer<FetchStatus>() {
+        mStockViewModel.getFetchData().observe(getViewLifecycleOwner(), new Observer<FetchStatus>() {
             @Override
             public void onChanged(FetchStatus fetchStatus) {
                 switch (fetchStatus){
@@ -100,6 +91,7 @@ public class StockDisplayFragment extends Fragment {
                         break;
 
                 }
+                mStockViewModel.initFetchStatus();
             }
         });
         setHasOptionsMenu(true);
@@ -108,14 +100,14 @@ public class StockDisplayFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        mRepo.startSync();
+        mStockViewModel.startSync();
 
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        mRepo.stopSync();
+        mStockViewModel.stopSync();
 
     }
 
@@ -136,12 +128,11 @@ public class StockDisplayFragment extends Fragment {
 
 
     public void addStock(final String symbol){
-        mRepo.searchAndAddStock(symbol);
+        mStockViewModel.searchAndStock(symbol);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        syncThread.quitSafely();
     }
 }

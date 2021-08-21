@@ -16,4 +16,5 @@ public interface DataRepository {
     public LiveData<FetchStatus> observeFetchStatus();
     public void startSync();
     public void stopSync();
+    public void initStatus();
 }

@@ -19,7 +19,7 @@ import androidx.lifecycle.MutableLiveData;
 
 public class StockRepository implements DataRepository{
 
-    private static final String TAG = "StockRepoitory" ;
+    private static final String TAG = "StockRepository" ;
     private static DataRepository INSTANCE = null;
 
     private LocalDataSource mLocalDataSource = null;
@@ -40,7 +40,21 @@ public class StockRepository implements DataRepository{
         @Override
         public void run() {
             Log.d(TAG,"RefreshingSTocks");
-            refreshStocks();
+            List<AppStock> appStocks = null;
+
+            try {
+                appStocks = mLocalDataSource.getAllStocks();
+                if(appStocks != null && appStocks.size() >0 ) {
+                    mRemoteDataSource.getRemoteStocks(appStocks);
+                    for (AppStock stock : appStocks) {
+                        mLocalDataSource.insertorUpdate(stock);
+                    }
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                //Ignore
+            }
         }
     };
 
@@ -49,6 +63,11 @@ public class StockRepository implements DataRepository{
     public void stopSync(){
         Log.d(TAG,"PauseRefresh");
         mHandler.removeCallbacksAndMessages(null);
+    }
+
+    @Override
+    public void initStatus() {
+        mFetchStatus.postValue(FetchStatus.INIT);
     }
 
 
@@ -99,8 +118,11 @@ public class StockRepository implements DataRepository{
                         mLocalDataSource.insertorUpdate(stock);
                         mFetchStatus.postValue(FetchStatus.STOCK_FOUND);
                     }
+                    else{
+                        mFetchStatus.postValue(FetchStatus.STOCK_NOT_FOUND);
+                    }
                 } catch (Exception e) {
-                    mFetchStatus.postValue(FetchStatus.STOCK_NOT_FOUND);
+                    mFetchStatus.postValue(FetchStatus.FETCH_ERROR);
                     e.printStackTrace();
                 }
 
@@ -117,19 +139,7 @@ public class StockRepository implements DataRepository{
 
     @Override
     public void refreshStocks() {
-        List<AppStock> appStocks = null;
-
-        try {
-            appStocks = mLocalDataSource.getAllStocks();
-            mRemoteDataSource.getRemoteStocks(appStocks);
-            for(AppStock stock:appStocks){
-                mLocalDataSource.insertorUpdate(stock);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            //Ignore
-        }
+        mExecutor.submit(mStockUpdateRunnable);
     }
 
     @Override
