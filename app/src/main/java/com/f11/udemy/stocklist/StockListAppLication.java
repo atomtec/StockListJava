@@ -17,6 +17,6 @@ public class StockListAppLication extends Application {
     public void onCreate() {
         super.onCreate();
         repository = StockRepository.getInstance(LocalDataSourceImpl.getInstance(this),
-                RemoteStockProviderSDK.getInstance(),new Handler(Looper.getMainLooper()));
+                RemoteStockProviderSDK.getInstance());
     }
 }

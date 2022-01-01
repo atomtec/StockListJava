@@ -1,6 +1,8 @@
 package com.f11.udemy.stocklist.data.repo;
 
 import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 
 import com.f11.udemy.stocklist.data.local.LocalDataSource;
@@ -30,8 +32,10 @@ public class StockRepository implements DataRepository{
 
     private MutableLiveData<FetchStatus> mFetchStatus = new MutableLiveData<FetchStatus>();
 
+
     private Handler mHandler;
 
+    HandlerThread mHandlerThread ;
     ExecutorService mExecutor = Executors.newCachedThreadPool();
 
 
@@ -70,18 +74,35 @@ public class StockRepository implements DataRepository{
         mFetchStatus.postValue(FetchStatus.INIT);
     }
 
+    @Override
+    public void clearHandlerThread() {
+        mHandlerThread.quitSafely();
+        mHandlerThread = null;
+    }
+
+    private void initHandlerThread(){
+        mHandlerThread = new HandlerThread("DBUpdateHandlerThread");
+        mHandlerThread.start();
+        mHandler = new Handler(mHandlerThread.getLooper());
+    }
+
 
     private StockRepository(LocalDataSource localDataSource,
-                             RemoteDataSource remoteDataSource ,Handler handler){
+                             RemoteDataSource remoteDataSource){
+        Log.d(TAG,"InitCalled");
         mLocalDataSource = localDataSource;
         mRemoteDataSource = remoteDataSource;
         mAppStockObservable = mLocalDataSource.observeStocks();
-        mHandler = handler;
+        initHandlerThread();
+
 
     }
 
     @Override
     public void startSync(){
+        if(mHandlerThread == null){
+            initHandlerThread();
+        }
         mHandler.post( new Runnable() {
             public void run() {
                 mExecutor.submit(mStockUpdateRunnable);
@@ -91,13 +112,12 @@ public class StockRepository implements DataRepository{
     }
 
     public static DataRepository getInstance(@NonNull LocalDataSource localDataSource,
-                                             @NonNull RemoteDataSource remoteDataSource,
-                                             @NonNull Handler handler) {
+                                             @NonNull RemoteDataSource remoteDataSource) {
         if (INSTANCE == null) {
             synchronized (StockRepository.class) {
                 if (INSTANCE == null) {
                     INSTANCE =new StockRepository(localDataSource ,
-                            remoteDataSource,handler);
+                            remoteDataSource);
                 }
             }
         }

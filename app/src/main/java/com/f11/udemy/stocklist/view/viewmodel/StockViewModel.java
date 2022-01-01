@@ -1,9 +1,10 @@
 package com.f11.udemy.stocklist.view.viewmodel;
 
+import android.util.Log;
+
 import com.f11.udemy.stocklist.data.model.AppStock;
 import com.f11.udemy.stocklist.data.model.FetchStatus;
 import com.f11.udemy.stocklist.data.repo.DataRepository;
-import com.f11.udemy.stocklist.data.repo.StockRepository;
 
 import java.util.List;
 
@@ -46,4 +47,10 @@ public class StockViewModel extends ViewModel {
         mRepo.searchAndAddStock(symbol);
     }
 
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        Log.d(TAG,"onClearedCalled");
+        mRepo.clearHandlerThread();
+    }
 }

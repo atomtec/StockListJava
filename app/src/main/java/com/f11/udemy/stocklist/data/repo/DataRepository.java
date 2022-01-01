@@ -17,4 +17,5 @@ public interface DataRepository {
     public void startSync();
     public void stopSync();
     public void initStatus();
+    void clearHandlerThread();
 }
